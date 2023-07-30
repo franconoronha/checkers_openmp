@@ -137,6 +137,22 @@ void Board::playGame()
         }
         else
         {
+            if (newX == x + 2 || newX = x - 2)
+            {
+                if (newY == y + 2 || newY == y - 2)
+                {
+                    Square captureSquare = getSquare((newX + x) / 2, (newY + y) / 2);
+                    if (captureSquare.getPiece == EMPTY)
+                    {
+                        cout << "You can't move there!" << endl;
+                        continue;
+                    }
+                    setSquarePiece(square.getPiece(), newX, newY);
+                    setSquarePiece(EMPTY, (newX + x) / 2, (newY + y) / 2);
+                    setSquarePiece(EMPTY, x, y);
+                    toggleTurn();
+                }
+            }
             cout << "You can't move there!" << endl;
             continue;
         }
