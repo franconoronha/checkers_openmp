@@ -41,9 +41,8 @@ int main() {
         }
         if(newX == x + 1 || newX == x - 1) {
             if(newY == y + 1 || newY == y - 1) {
-                newSquare.setPiece(square.getPiece());
-                board.setSquare(newSquare, newX, newY);
-                board.setSquare(Square(x, y), x, y);
+                board.setSquarePiece(square.getPiece(), newX, newY); // tem que ser por função de board, se não não muda sem criar um novo square;
+                board.setSquarePiece(EMPTY, x, y); // a não ser que tudo isso ocorra dentro de board?
                 board.toggleTurn();
             }
             else {

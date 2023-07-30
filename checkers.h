@@ -72,6 +72,10 @@ public:
     {
         return squares[x][y];
     }
+    void setSquarePiece(Piece piece, int x, int y)
+    {
+        squares[x][y].setPiece(piece);
+    }
     void setSquare(Square square, int x, int y)
     {
         squares[x][y] = square;
