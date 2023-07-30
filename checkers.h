@@ -42,7 +42,8 @@ public:
         x = newX;
         y = newY;
     };
-    Square() {
+    Square()
+    {
         piece = EMPTY;
         x = 0;
         y = 0;
@@ -54,10 +55,10 @@ class Board
     Square squares[8][8];
     bool gameOver;
     Turn turn;
-
-public:
     vector<Square> whitePieces;
     vector<Square> blackPieces;
+
+public:
     bool isGameOver() { return gameOver; }
     void setGameOver(bool gameState) { gameOver = gameState; }
     Turn getTurn() { return turn; }
@@ -66,21 +67,12 @@ public:
     {
         gameOver = false;
         turn = WHITE_TURN;
-        resetBoard();
     }
-    Square getSquare(int x, int y)
-    {
-        return squares[x][y];
-    }
-    void setSquarePiece(Piece piece, int x, int y)
-    {
-        squares[x][y].setPiece(piece);
-    }
-    void setSquare(Square square, int x, int y)
-    {
-        squares[x][y] = square;
-    }
-    void resetBoard();
+    Square getSquare(int x, int y) { return squares[x][y]; }
+    void setSquarePiece(Piece piece, int x, int y) { squares[x][y].setPiece(piece); }
+    void setSquare(Square square, int x, int y) { squares[x][y] = square; }
+    void clearBoard();
     void printBoard();
     void toggleTurn();
+    void playGame();
 };
