@@ -25,10 +25,12 @@ class Square
 public:
     void setPiece(Piece newPiece) { piece = newPiece; }
     Piece getPiece() { return piece; }
-    void setX(int newX) { x = newX; }
+/*     void setX(int newX) { x = newX; }
     void setY(int newY) { y = newY; }
     int getX() { return x; }
-    int getY() { return y; }
+    int getY() { return y; } */
+    bool isEmpty() { return piece == EMPTY; }
+    bool turnToPlay(Turn turn);
     Square(Piece newPiece, int newX, int newY)
     {
         piece = newPiece;
@@ -41,7 +43,7 @@ public:
         x = newX;
         y = newY;
     };
-    Square(Square s) {
+    Square(const Square& s) {
         piece = s.piece;
         x = s.x;
         y = s.y;
@@ -66,10 +68,10 @@ public:
         gameOver = false;
         turn = WHITE_TURN;
     }
-    Board(board b) // Construtor de cópia
+    Board(const Board& b) // Construtor de cópia
     {
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; i < 8; j++) {
+        for (int i = 0; i < 8; ++i) {
+            for (int j = 0; j < 8; ++j) {
                 squares[i][j] = Square(b.squares[i][j]);
             }
         }
@@ -87,4 +89,11 @@ public:
     void printBoard();
     void toggleTurn();
     void playGame();
+    void playGame2();
+    void copySquares(Board b);
+    vector<Board> findMoves();
+    vector<Board> findCaptures();
+    vector<Board> findMovesAndCaptures();
+    Board captureChain();
+    vector<Board> findSquareMoves(int x, int y);
 };

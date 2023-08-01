@@ -1,18 +1,18 @@
 #include <iostream>
 #include <string>
-
+#include <vector>
 #include "checkers.h"
 
 using namespace std;
 
 int main()
 {
-    Board *board = new Board();
+    Board board = Board();
     string again;
     do
     {
-        board->clearBoard();
-        board->playGame();
+        board.clearBoard();
+        board.playGame2();
         cout << "Do you want to play again? (y for yes, anything else for no)";
         cin >> again;
     } while (again == "y");
