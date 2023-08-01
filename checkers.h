@@ -1,5 +1,4 @@
 #include <iostream>
-#include <vector>
 
 using namespace std;
 
@@ -42,6 +41,11 @@ public:
         x = newX;
         y = newY;
     };
+    Square(Square s) {
+        piece = s.piece;
+        x = s.x;
+        y = s.y;
+    }
     Square()
     {
         piece = EMPTY;
@@ -55,19 +59,27 @@ class Board
     Square squares[8][8];
     bool gameOver;
     Turn turn;
-    vector<Square> whitePieces;
-    vector<Square> blackPieces;
 
 public:
-    bool isGameOver() { return gameOver; }
-    void setGameOver(bool gameState) { gameOver = gameState; }
-    Turn getTurn() { return turn; }
-    void setTurn(Turn newTurn) { turn = newTurn; }
     Board()
     {
         gameOver = false;
         turn = WHITE_TURN;
     }
+    Board(board b) // Construtor de cópia
+    {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; i < 8; j++) {
+                squares[i][j] = Square(b.squares[i][j]);
+            }
+        }
+        gameOver = b.gameOver;
+        turn = b.turn;
+    }
+    bool isGameOver() { return gameOver; }
+    void setGameOver(bool gameState) { gameOver = gameState; }
+    Turn getTurn() { return turn; }
+    void setTurn(Turn newTurn) { turn = newTurn; }
     Square getSquare(int x, int y) { return squares[x][y]; }
     void setSquarePiece(Piece piece, int x, int y) { squares[x][y].setPiece(piece); }
     void setSquare(Square square, int x, int y) { squares[x][y] = square; }

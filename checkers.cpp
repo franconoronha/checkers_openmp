@@ -50,24 +50,41 @@ void Board::clearBoard()
             if ((i == 0 || i == 2) && j % 2 != 0)
             {
                 squares[i][j].setPiece(BLACK);
-                blackPieces.push_back(squares[i][j]);
             }
             if (i == 1 && j % 2 == 0)
             {
                 squares[i][j].setPiece(BLACK);
-                blackPieces.push_back(squares[i][j]);
             }
             if ((i == 5 || i == 7) && j % 2 == 0)
             {
                 squares[i][j].setPiece(WHITE);
-                whitePieces.push_back(squares[i][j]);
             }
             if (i == 6 && j % 2 != 0)
             {
                 squares[i][j].setPiece(WHITE);
-                whitePieces.push_back(squares[i][j]);
             }
         }
+    }
+}
+
+Turn Board::checkTurn(Piece p){
+    if (p == BLACK || p == BLACK_KING) {
+        return BLACK_TURN;
+    }
+    else {
+        return WHITE_TURN;
+    }
+}
+
+bool Square::turnToPlay(Turn turn)
+{
+    if (turn == BLACK_TURN && piece == BLACK || turn == WHITE_TURN && piece == WHITE)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 
@@ -157,4 +174,185 @@ void Board::playGame()
             continue;
         }
     }
+}
+
+vector<Board> Board::findMoves()
+{
+    vector<Board> moves;
+    for (int i = 0; i < 8; ++i)
+    {
+        for (int j = 0; i < 8; ++j)
+        {
+            if (squares[i][j].turnToPlay(turn))
+            {
+                if (i + 1 <= 7 && j + 1 <= 7) {
+                    if (squares[i + 1][j + 1].getPiece() == EMPTY)
+                    {
+                        Board newBoard = Board(*this);
+                        newBoard.setSquarePiece(squares[i][j].getPiece(), i + 1, j + 1);
+                        newBoard.setSquarePiece(EMPTY, i, j);
+                        moves.push_back(newBoard);
+                    }
+                }
+                
+                if (i - 1 >= 0 && j + 1 <= 7) {
+                    if (squares[i - 1][j + 1].getPiece() == EMPTY)
+                    {
+                        Board newBoard = Board(*this);
+                        newBoard.setSquarePiece(squares[i][j].getPiece(), i - 1, j + 1);
+                        newBoard.setSquarePiece(EMPTY, i, j);
+                        moves.push_back(newBoard);
+                    }
+                }
+
+                if (i + 1 <= 7 && j - 1 >= 0) {
+                    if (squares[i + 1][j - 1].getPiece() == EMPTY)
+                    {
+                        Board newBoard = Board(*this);
+                        newBoard.setSquarePiece(squares[i][j].getPiece(), i + 1, j - 1);
+                        newBoard.setSquarePiece(EMPTY, i, j);
+                        moves.push_back(newBoard);
+                    }
+                }
+
+                if (i - 1 >= 0 && j - 1 >= 0) {
+                    if (squares[i - 1][j - 1].getPiece() == EMPTY)
+                    {
+                        Board newBoard = Board(*this);
+                        newBoard.setSquarePiece(squares[i][j].getPiece(), i - 1, j - 1);
+                        newBoard.setSquarePiece(EMPTY, i, j);
+                        moves.push_back(newBoard);
+                    }
+                }
+            }
+        }
+    }
+    return moves;
+}
+
+vector<Board> Board::findCaptures() {
+    vector<Board> captures;
+    for (int i = 0; i < 8; ++i)
+    {
+        for (int j = 0; i < 8; ++j)
+        {
+            if (squares[i][j].turnToPlay(turn))
+            {
+                if (i + 1 <= 7 && j + 1 <= 7 && i + 2 <= 7 && j + 2 <= 7) {
+                // se a peça na diagonal não for a vez (time oposto), e a seguinte estiver vazia.
+                    if (!squares[i + 1][j + 1].turnToPlay(turn) && squares[i + 2][j + 2].getPiece() == EMPTY)
+                    {
+                        Board newBoard = Board(*this);
+                        newBoard.setSquarePiece(squares[i][j].getPiece(), i + 2, j + 2);
+                        newBoard.setSquarePiece(EMPTY, i, j);
+                        newBoard.setSquarePiece(EMPTY, i + 1, j + 1);
+                        captures.push_back(newBoard);
+                    }
+                }
+                if (i - 1 >= 0 && j + 1 <= 7 && i - 2 >= 0 && j + 2 <= 7) {
+                    if (squares[i - 1][j + 1].turnToPlay(turn) && squares[i - 2][j + 2].getPiece() == EMPTY)
+                    {
+                        Board newBoard = Board(*this);
+                        newBoard.setSquarePiece(squares[i][j].getPiece(), i - 2, j + 2);
+                        newBoard.setSquarePiece(EMPTY, i, j);
+                        newBoard.setSquarePiece(EMPTY, i - 1, j + 1);
+                        captures.push_back(newBoard);
+                    }
+                }
+
+                if (i + 1 <= 7 && j - 1 >= 0 && i + 2 <= 7 && j - 2 >= 0) {
+                    if (squares[i + 1][j - 1].turnToPlay(turn) && squares[i + 2][j - 2].getPiece() == EMPTY)
+                    {
+                        Board newBoard = Board(*this);
+                        newBoard.setSquarePiece(squares[i][j].getPiece(), i + 2, j - 2);
+                        newBoard.setSquarePiece(EMPTY, i, j);
+                        newBoard.setSquarePiece(EMPTY, i + 1, j - 1);
+                        captures.push_back(newBoard);
+                    }
+                }
+
+                if (i - 1 >= 0 && j - 1 >= 0 && i - 2 >= 0 && j - 2 >= 0) {
+                if (squares[i - 1][j - 1].turnToPlay(turn) && squares[i - 2][j - 2].getPiece() == EMPTY)
+                    {
+                        Board newBoard = Board(*this);
+                        newBoard.setSquarePiece(squares[i][j].getPiece(), i - 2, j - 2);
+                        newBoard.setSquarePiece(EMPTY, i, j);
+                        newBoard.setSquarePiece(EMPTY, i - 1, j - 1);
+                        captures.push_back(newBoard);
+                    }
+                }
+            }
+        }
+    }
+    return captures;
+}
+
+vector<Board> Board::findMovesAndCaptures() {
+    vector<Board> movesAndCaptures;
+    vector<Board> captures = findCaptures();
+    movesAndCaptures.insert(movesAndCaptures.end(), captures.begin(), captures.end());
+    if (captures.size() == 0) {
+        vector<Board> moves = findMoves();
+        movesAndCaptures.insert(movesAndCaptures.end(), moves.begin(), moves.end());
+    }
+    return movesAndCaptures;
+}
+
+Board Board::captureChain() {
+    vector<Board> captures = findCaptures();
+    if (captures.size() == 0) {
+        return *this;
+    }
+    else {
+        Board newBoard = captures[0].captureChain();
+        return newBoard;
+    }
+}
+
+vector<Board> Board::findSquareMoves(int x, int y) {
+    vector<Board> moves;
+    Square square = getSquare(x, y);
+    if (square.turnToPlay(turn))
+    {
+        if (x + 1 <= 7 && y + 1 <= 7) {
+            if (squares[x + 1][y + 1].getPiece() == EMPTY)
+            {
+                Board newBoard = Board(*this);
+                newBoard.setSquarePiece(square.getPiece(), x + 1, y + 1);
+                newBoard.setSquarePiece(EMPTY, x, y);
+                moves.push_back(newBoard);
+            }
+        }
+        
+        if (x - 1 >= 0 && y + 1 <= 7) {
+            if (squares[x - 1][y + 1].getPiece() == EMPTY)
+            {
+                Board newBoard = Board(*this);
+                newBoard.setSquarePiece(square.getPiece(), x - 1, y + 1);
+                newBoard.setSquarePiece(EMPTY, x, y);
+                moves.push_back(newBoard);
+            }
+        }
+
+        if (x + 1 <= 7 && y - 1 >= 0) {
+            if (squares[x + 1][y - 1].getPiece() == EMPTY)
+            {
+                Board newBoard = Board(*this);
+                newBoard.setSquarePiece(square.getPiece(), x + 1, y - 1);
+                newBoard.setSquarePiece(EMPTY, x, y);
+                moves.push_back(newBoard);
+            }
+        }
+
+        if (x - 1 >= 0 && y - 1 >= 0) {
+            if (squares[x - 1][y - 1].getPiece() == EMPTY)
+            {
+                Board newBoard = Board(*this);
+                newBoard.setSquarePiece(square.getPiece(), x - 1, y - 1);
+                newBoard.setSquarePiece(EMPTY, x, y);
+                moves.push_back(newBoard);
+            }
+        }
+    }
+    return moves;
 }
