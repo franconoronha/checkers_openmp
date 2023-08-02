@@ -54,6 +54,7 @@ public:
         x = 0;
         y = 0;
     }
+    void promote() { piece = (piece == WHITE) ? WHITE_KING : BLACK_KING; }
 };
 
 class Board
@@ -89,11 +90,11 @@ public:
     void printBoard();
     void toggleTurn();
     void playGame();
-    void playGame2();
     void copySquares(Board b);
     vector<Board> findMoves();
     vector<Board> findCaptures();
     vector<Board> findMovesAndCaptures();
     Board captureChain();
+    vector<Board> findSquareCaptures(int x, int y);
     vector<Board> findSquareMoves(int x, int y);
 };

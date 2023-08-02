@@ -91,83 +91,14 @@ void Board::toggleTurn()
     }
 }
 
-void Board::playGame()
-{
-    while (!isGameOver())
-    {
-        printBoard();
-        cout << "Enter the x coordinate of the piece you want to move: ";
-        int x;
-        cin >> x;
-        cout << "Enter the y coordinate of the piece you want to move: ";
-        int y;
-        cin >> y;
-
-        Square square = getSquare(x, y);
-        if (square.getPiece() == EMPTY)
-        {
-            cout << "There is no piece there!" << endl;
-            continue;
-        }
-
-        if (getTurn() == BLACK_TURN && square.getPiece() != BLACK || getTurn() == WHITE_TURN && square.getPiece() != WHITE)
-        {
-            cout << "You can't move that piece!" << endl;
-            continue;
-        }
-
-        cout << "Enter the x coordinate of the square you want to move to: ";
-        int newX;
-        cin >> newX;
-        cout << "Enter the y coordinate of the square you want to move to: ";
-        int newY;
-        cin >> newY;
-
-        Square newSquare = getSquare(newX, newY);
-        if (newSquare.getPiece() != EMPTY)
-        {
-            cout << "There is already a piece there!" << endl;
-            continue;
-        }
-        if (newX == x + 1 || newX == x - 1)
-        {
-            if (newY == y + 1 || newY == y - 1)
-            {
-                setSquarePiece(square.getPiece(), newX, newY); // tem que ser por função de board, se não não muda sem criar um novo square;
-                setSquarePiece(EMPTY, x, y);                   // a não ser que tudo isso ocorra dentro de board?
-                toggleTurn();
-            }
-            else
-            {
-                cout << "You can't move there!" << endl;
-                continue;
-            }
-        }
-        else
-        {
-            if (newX == x + 2 || newX == x - 2)
-            {
-                if (newY == y + 2 || newY == y - 2)
-                {
-                    Square captureSquare = getSquare((newX + x) / 2, (newY + y) / 2);
-                    if (captureSquare.getPiece() == EMPTY)
-                    {
-                        cout << "You can't move there!" << endl;
-                        continue;
-                    }
-                    setSquarePiece(square.getPiece(), newX, newY);
-                    setSquarePiece(EMPTY, (newX + x) / 2, (newY + y) / 2);
-                    setSquarePiece(EMPTY, x, y);
-                    toggleTurn();
-                }
-            }
-            cout << "You can't move there!" << endl;
-            continue;
-        }
-    }
+bool oppositeSquare(Square s1, Square s2) {
+    if ((s1.getPiece() == BLACK && s2.getPiece() == WHITE) || (s1.getPiece() == WHITE && s2.getPiece() == BLACK))
+        return true;
+    else 
+        return false;
 }
 
-void Board::playGame2()
+void Board::playGame()
 {
     while (!isGameOver())
     {
@@ -204,30 +135,54 @@ void Board::playGame2()
             continue;
         }
 
-        vector<Board> moves = findSquareMoves(x, y);
-        cout << moves.size() << endl;
-        if (moves.size() == 0) {
+        vector<Board> allCaptures = findCaptures();
+        vector<Board> captures = findSquareCaptures(x, y);
+        for (int i = 0; i < captures.size(); ++i) {
+            captures[i] = captures[i].captureChain();
+        }
+        if (allCaptures.size() > 0 && captures.size() == 0) {
             clearScreen();
-            cout << "There are no moves for that piece!" << endl;
+            cout << "You have to capture a piece!" << endl;
             continue;
         }
+        if (captures.size() == 0) {
+            vector<Board> moves = findSquareMoves(x, y);
+            if (moves.size() == 0) {
+                clearScreen();
+                cout << "There are no moves for that piece!" << endl;
+                continue;
+            }
 
-        for (int i = 0; i < moves.size(); ++i) {
-            moves[i].printBoard();
-            cout << "Move " << i << endl;
+            for (int i = 0; i < moves.size(); ++i) {
+                moves[i].printBoard();
+                cout << "Move " << i << endl;
+            }
+
+            cout << "Enter the number of the move you want to make: ";
+            cin >> moveIndex;
+
+            if (moveIndex < 0 || moveIndex >= moves.size()) {
+                clearScreen();
+                cout << "Invalid move!" << endl;
+                continue;
+            }
+            copySquares(moves[moveIndex]); 
+        } else {
+            for (int i = 0; i < captures.size(); ++i) {
+                captures[i].printBoard();
+                cout << "Move " << i << endl;
+            }
+
+            cout << "Enter the number of the move you want to make: ";
+            cin >> moveIndex;
+
+            if (moveIndex < 0 || moveIndex >= captures.size()) {
+                clearScreen();
+                cout << "Invalid move!" << endl;
+                continue;
+            }
+            copySquares(captures[moveIndex]); 
         }
-
-        cout << "Enter the number of the move you want to make: ";
-        cin >> moveIndex;
-
-        if (moveIndex < 0 || moveIndex >= moves.size()) {
-            clearScreen();
-            cout << "Invalid move!" << endl;
-            continue;
-        }
-        copySquares(moves[moveIndex]); 
-        // trocar para board estar em outra classe 
-        //e poder trocar de board ao invés de trocar squares???
         toggleTurn();
         clearScreen();
     }
@@ -245,7 +200,6 @@ void Board::copySquares(Board b) {
 
 vector<Board> Board::findMoves()
 {
-    // por enquanto só peças normais
     vector<Board> moves;
     for (int i = 0; i < 8; ++i)
     {
@@ -260,6 +214,8 @@ vector<Board> Board::findMoves()
                             Board newBoard = Board(*this);
                             newBoard.setSquarePiece(squares[i][j].getPiece(), i + 1, j + 1);
                             newBoard.setSquarePiece(EMPTY, i, j);
+                            if (i + 1 == 7 && newBoard.squares[i + 1][j + 1].getPiece() == BLACK)
+                                newBoard.getSquare(i + 1, j + 1).promote();
                             moves.push_back(newBoard);
                         }
                     }
@@ -270,6 +226,8 @@ vector<Board> Board::findMoves()
                             Board newBoard = Board(*this);
                             newBoard.setSquarePiece(squares[i][j].getPiece(), i + 1, j - 1);
                             newBoard.setSquarePiece(EMPTY, i, j);
+                            if (i + 1 == 7 && newBoard.squares[i + 1][j - 1].getPiece() == BLACK)
+                                newBoard.squares[i + 1][j - 1].promote();
                             moves.push_back(newBoard);
                         }
                     }
@@ -280,6 +238,8 @@ vector<Board> Board::findMoves()
                             Board newBoard = Board(*this);
                             newBoard.setSquarePiece(squares[i][j].getPiece(), i - 1, j + 1);
                             newBoard.setSquarePiece(EMPTY, i, j);
+                            if (i - 1 == 0 && newBoard.squares[i - 1][j + 1].getPiece() == WHITE)
+                                newBoard.squares[i - 1][j + 1].promote();
                             moves.push_back(newBoard);
                         }
                     }
@@ -290,6 +250,8 @@ vector<Board> Board::findMoves()
                             Board newBoard = Board(*this);
                             newBoard.setSquarePiece(squares[i][j].getPiece(), i - 1, j - 1);
                             newBoard.setSquarePiece(EMPTY, i, j);
+                            if (i - 1 == 0 && newBoard.squares[i - 1][j - 1].getPiece() == WHITE)
+                                newBoard.squares[i - 1][j - 1].promote();
                             moves.push_back(newBoard);
                         }
                     }
@@ -304,13 +266,13 @@ vector<Board> Board::findCaptures() {
     vector<Board> captures;
     for (int i = 0; i < 8; ++i)
     {
-        for (int j = 0; i < 8; ++j)
+        for (int j = 0; j < 8; ++j)
         {
             if (squares[i][j].turnToPlay(turn))
             {
                 if (i + 1 <= 7 && j + 1 <= 7 && i + 2 <= 7 && j + 2 <= 7) {
                 // se a peça na diagonal não for a vez (time oposto), e a seguinte estiver vazia.
-                    if (!squares[i + 1][j + 1].turnToPlay(turn) && squares[i + 2][j + 2].getPiece() == EMPTY)
+                    if (oppositeSquare(squares[i][j], squares[i + 1][j + 1]) && squares[i + 2][j + 2].getPiece() == EMPTY)
                     {
                         Board newBoard = Board(*this);
                         newBoard.setSquarePiece(squares[i][j].getPiece(), i + 2, j + 2);
@@ -320,7 +282,7 @@ vector<Board> Board::findCaptures() {
                     }
                 }
                 if (i - 1 >= 0 && j + 1 <= 7 && i - 2 >= 0 && j + 2 <= 7) {
-                    if (squares[i - 1][j + 1].turnToPlay(turn) && squares[i - 2][j + 2].getPiece() == EMPTY)
+                    if (oppositeSquare(squares[i][j], squares[i - 1][j + 1]) && squares[i - 2][j + 2].getPiece() == EMPTY)
                     {
                         Board newBoard = Board(*this);
                         newBoard.setSquarePiece(squares[i][j].getPiece(), i - 2, j + 2);
@@ -331,7 +293,7 @@ vector<Board> Board::findCaptures() {
                 }
 
                 if (i + 1 <= 7 && j - 1 >= 0 && i + 2 <= 7 && j - 2 >= 0) {
-                    if (squares[i + 1][j - 1].turnToPlay(turn) && squares[i + 2][j - 2].getPiece() == EMPTY)
+                    if (oppositeSquare(squares[i][j], squares[i + 1][j - 1]) && squares[i + 2][j - 2].getPiece() == EMPTY)
                     {
                         Board newBoard = Board(*this);
                         newBoard.setSquarePiece(squares[i][j].getPiece(), i + 2, j - 2);
@@ -342,7 +304,7 @@ vector<Board> Board::findCaptures() {
                 }
 
                 if (i - 1 >= 0 && j - 1 >= 0 && i - 2 >= 0 && j - 2 >= 0) {
-                if (squares[i - 1][j - 1].turnToPlay(turn) && squares[i - 2][j - 2].getPiece() == EMPTY)
+                    if (oppositeSquare(squares[i][j], squares[i - 1][j - 1]) && squares[i - 2][j - 2].getPiece() == EMPTY)
                     {
                         Board newBoard = Board(*this);
                         newBoard.setSquarePiece(squares[i][j].getPiece(), i - 2, j - 2);
@@ -391,6 +353,8 @@ vector<Board> Board::findSquareMoves(int x, int y) {
                     Board newBoard = Board(*this);
                     newBoard.setSquarePiece(square.getPiece(), x + 1, y + 1);
                     newBoard.setSquarePiece(EMPTY, x, y);
+                    if (x + 1 == 7 && newBoard.squares[x + 1][y + 1].getPiece() == BLACK)
+                        newBoard.squares[x + 1][y + 1].promote();
                     moves.push_back(newBoard);
                 }
             }
@@ -401,6 +365,8 @@ vector<Board> Board::findSquareMoves(int x, int y) {
                     Board newBoard = Board(*this);
                     newBoard.setSquarePiece(square.getPiece(), x + 1, y - 1);
                     newBoard.setSquarePiece(EMPTY, x, y);
+                    if (x + 1 == 7 && newBoard.squares[x + 1][y - 1].getPiece() == BLACK)
+                        newBoard.squares[x + 1][y - 1].promote();
                     moves.push_back(newBoard);
                 }
             }
@@ -411,6 +377,8 @@ vector<Board> Board::findSquareMoves(int x, int y) {
                     Board newBoard = Board(*this);
                     newBoard.setSquarePiece(square.getPiece(), x - 1, y + 1);
                     newBoard.setSquarePiece(EMPTY, x, y);
+                    if (x - 1 == 0 && newBoard.squares[x - 1][y + 1].getPiece() == WHITE)
+                        newBoard.squares[x - 1][y + 1].promote();
                     moves.push_back(newBoard);
                 }
             }
@@ -421,6 +389,8 @@ vector<Board> Board::findSquareMoves(int x, int y) {
                     Board newBoard = Board(*this);
                     newBoard.setSquarePiece(square.getPiece(), x - 1, y - 1);
                     newBoard.setSquarePiece(EMPTY, x, y);
+                    if (x - 1 == 0 && newBoard.squares[x - 1][y - 1].getPiece() == WHITE)
+                        newBoard.squares[x - 1][y - 1].promote();
                     moves.push_back(newBoard);
                 }
             }
@@ -431,3 +401,67 @@ vector<Board> Board::findSquareMoves(int x, int y) {
     cout << moves.size() << endl;
     return moves;
 }
+
+vector<Board> Board::findSquareCaptures(int x, int y) {
+    vector<Board> captures;
+    Square square = getSquare(x, y);
+    if (square.turnToPlay(turn))
+    {
+        if (x + 1 <= 7 && y + 1 <= 7 && x + 2 <= 7 && y + 2 <= 7) {
+            if (oppositeSquare(square, squares[x + 1][y + 1]) && squares[x + 2][y + 2].isEmpty())
+            {
+                Board newBoard = Board(*this);
+                newBoard.setSquarePiece(square.getPiece(), x + 2, y + 2);
+                newBoard.setSquarePiece(EMPTY, x, y);
+                newBoard.setSquarePiece(EMPTY, x + 1, y + 1);
+                if (x + 2 == 7 && newBoard.squares[x + 2][y + 2].getPiece() == BLACK)
+                    newBoard.squares[x + 2][y + 2].promote();
+                captures.push_back(newBoard);
+            }
+        }
+        if (x - 1 >= 0 && y + 1 <= 7 && x - 2 >= 0 && y + 2 <= 7) {
+            if (oppositeSquare(square, squares[x - 1][y + 1]) && squares[x - 2][y + 2].isEmpty())
+            {
+                Board newBoard = Board(*this);
+                newBoard.setSquarePiece(square.getPiece(), x - 2, y + 2);
+                newBoard.setSquarePiece(EMPTY, x, y);
+                newBoard.setSquarePiece(EMPTY, x - 1, y + 1);
+                if(x - 2 == 0 && newBoard.squares[x - 2][y + 2].getPiece() == WHITE)
+                    newBoard.squares[x - 2][y + 2].promote();
+                captures.push_back(newBoard);
+            }
+        }
+
+        if (x + 1 <= 7 && y - 1 >= 0 && x + 2 <= 7 && y - 2 >= 0) {
+            if (oppositeSquare(square, squares[x + 1][y - 1]) && squares[x + 2][y - 2].isEmpty())
+            {
+                Board newBoard = Board(*this);
+                newBoard.setSquarePiece(square.getPiece(), x + 2, y - 2);
+                newBoard.setSquarePiece(EMPTY, x, y);
+                newBoard.setSquarePiece(EMPTY, x + 1, y - 1);
+                if(x + 2 == 7 && newBoard.squares[x + 2][y - 2].getPiece() == BLACK)
+                    newBoard.squares[x + 2][y - 2].promote();
+                captures.push_back(newBoard);
+            }
+        }
+
+        if (x - 1 >= 0 && y - 1 >= 0 && x - 2 >= 0 && y - 2 >= 0) {
+            if (oppositeSquare(square, squares[x - 1][y - 1]) && squares[x - 2][y - 2].isEmpty())
+            {
+                Board newBoard = Board(*this);
+                newBoard.setSquarePiece(square.getPiece(), x - 2, y - 2);
+                newBoard.setSquarePiece(EMPTY, x, y);
+                newBoard.setSquarePiece(EMPTY, x - 1, y - 1);
+                if(x - 2 == 0 && newBoard.squares[x - 2][y - 2].getPiece() == WHITE)
+                    newBoard.squares[x - 2][y - 2].promote();
+                captures.push_back(newBoard);
+            }
+        }
+    }
+    return captures;
+}
+
+
+
+
+
