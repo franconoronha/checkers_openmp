@@ -15,7 +15,7 @@ int main()
         board.playGame();
         cout << "Do you want to play again? (y for yes, anything else for no)";
         cin >> again;
-    } while (again == "y");
+    } while (again.compare("y") == 0);
 
     return 0;
 }

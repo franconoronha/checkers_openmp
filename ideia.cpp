@@ -1,3 +1,11 @@
+// Não testei pra ver se isso funciona
+// Mas no código eu to fazendo um if pra cada diagonal
+// Desse jeito ele vê as diagonais em um for
+// também daria pra trocar a função findCaptures pra fazer findSquareCapture em cada Square
+// pra repetir menos código
+// findCaptures procura por capturas em todas as peças
+// findSquareCapture procura por capturas em uma peça só
+
 vector<Board> Board::findCaptures() {
     vector<Board> captures;
     for (int i = 0; i < 8; ++i)

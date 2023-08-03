@@ -20,39 +20,21 @@ enum Turn
 class Square
 {
     Piece piece;
-    int x, y;
-
 public:
     void setPiece(Piece newPiece) { piece = newPiece; }
     Piece getPiece() { return piece; }
-/*     void setX(int newX) { x = newX; }
-    void setY(int newY) { y = newY; }
-    int getX() { return x; }
-    int getY() { return y; } */
     bool isEmpty() { return piece == EMPTY; }
     bool turnToPlay(Turn turn);
-    Square(Piece newPiece, int newX, int newY)
+    Square(Piece newPiece)
     {
         piece = newPiece;
-        x = newX;
-        y = newY;
-    };
-    Square(int newX, int newY)
-    {
-        piece = EMPTY;
-        x = newX;
-        y = newY;
     };
     Square(const Square& s) {
         piece = s.piece;
-        x = s.x;
-        y = s.y;
     }
     Square()
     {
         piece = EMPTY;
-        x = 0;
-        y = 0;
     }
     void promote() { piece = (piece == WHITE) ? WHITE_KING : BLACK_KING; }
 };
@@ -62,12 +44,17 @@ class Board
     Square squares[8][8];
     bool gameOver;
     Turn turn;
-
 public:
+    bool whiteVictory = false;
+    bool blackVictory = false;
+    int whitePieces;
+    int blackPieces;
     Board()
     {
         gameOver = false;
         turn = WHITE_TURN;
+        whitePieces = 12;
+        blackPieces = 12;
     }
     Board(const Board& b) // Construtor de cópia
     {
@@ -78,6 +65,8 @@ public:
         }
         gameOver = b.gameOver;
         turn = b.turn;
+        whitePieces = b.whitePieces;
+        blackPieces = b.blackPieces;
     }
     bool isGameOver() { return gameOver; }
     void setGameOver(bool gameState) { gameOver = gameState; }
@@ -90,6 +79,7 @@ public:
     void printBoard();
     void toggleTurn();
     void playGame();
+    void endGame();
     void copySquares(Board b);
     vector<Board> findMoves();
     vector<Board> findCaptures();
