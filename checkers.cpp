@@ -1,8 +1,120 @@
 #include <iostream>
 #include <vector>
 #include "checkers.h"
+#include <omp.h>
+#include <chrono>
 
+using namespace std::chrono;
 using namespace std;
+
+Board seq_minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta) {
+    if (depth == 0 || b.isGameOver()) {
+        return b;
+    }
+    if (maximizingPlayer) {
+        vector<Board> moves = b.findMovesAndCaptures();
+        Board bestMove = moves[0];
+        int bestScore = -1000;
+        int size = moves.size();
+        for (int i = 0; i < size; ++i) {
+            Board newBoard = seq_minimax(moves[i], depth - 1, false, alpha, beta);
+            int score = newBoard.evaluate();
+            if (score > bestScore) {
+            bestScore = score;
+            bestMove = moves[i];
+            }
+            if (score > alpha) {
+                alpha = score;
+            }
+            if (beta <= alpha) {
+                break;
+            }
+        }
+
+        return bestMove;
+    } else {
+        vector<Board> moves = b.findMovesAndCaptures();
+        Board bestMove = moves[0];
+        int bestScore = 1000;
+        int size = moves.size();
+        for (int i = 0; i < size; ++i) {
+            Board newBoard = seq_minimax(moves[i], depth - 1, true, alpha, beta);
+            int score = newBoard.evaluate();
+            if (score < bestScore) {
+            bestScore = score;
+            bestMove = moves[i];
+            }
+            if (score < beta) {
+                beta = score;
+            }
+            if (beta <= alpha) {
+                break;
+            }
+        }
+        return bestMove;
+    }
+}
+
+Board minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta) {
+    if (depth == 0 || b.isGameOver()) {
+        return b;
+    }
+    if (maximizingPlayer) {
+        vector<Board> moves = b.findMovesAndCaptures();
+        Board bestMove = moves[0];
+        int bestScore = -1000;
+        int size = moves.size();
+        volatile bool flag = false;
+        #pragma omp parallel for shared(flag) num_threads(4)
+        for (int i = 0; i < size; ++i) {
+            if (flag) continue;
+            Board newBoard = minimax(moves[i], depth - 1, false, alpha, beta);
+            int score = newBoard.evaluate();
+            
+            #pragma critical
+            {
+                if (score > bestScore) {
+                bestScore = score;
+                bestMove = moves[i];
+                }
+                if (score > alpha) {
+                    alpha = score;
+                }
+                if (beta <= alpha) {
+                    flag = true;
+                }
+            }
+        }
+
+        return bestMove;
+    } else {
+        vector<Board> moves = b.findMovesAndCaptures();
+        Board bestMove = moves[0];
+        int bestScore = 1000;
+        int size = moves.size();
+        volatile bool flag = false;
+        #pragma omp parallel for shared(flag) num_threads(4)
+        for (int i = 0; i < size; ++i) {
+            if (flag) continue;
+            Board newBoard = minimax(moves[i], depth - 1, true, alpha, beta);
+            int score = newBoard.evaluate();
+            #pragma critical
+            {
+                if (score < bestScore) {
+                bestScore = score;
+                bestMove = moves[i];
+                }
+                if (score < beta) {
+                    beta = score;
+                }
+                if (beta <= alpha) {
+                    flag = true;
+                }
+            }
+        }
+        return bestMove;
+    }
+}
 
 void clearScreen()
 {
@@ -133,14 +245,24 @@ bool oppositeSquare(Square s1, Square s2)
 }
 
 void Board::playGame()
-{
+{   
+    cout << omp_get_num_threads() << endl;
+    bool firstAImove = false;
+    auto start = high_resolution_clock::now();
+    auto end = high_resolution_clock::now();
     while (!isGameOver())
     {
+        if (firstAImove) {
+            auto duration = duration_cast<milliseconds>(end - start);
+            cout << "AI took " << duration.count() << " milliseconds to make a move" << endl;
+        }
+
         if (whitePieces == 0 || blackPieces == 0)
         {
             endGame();
             break;
         }
+
         vector<Board> allCaptures = findCaptures();
         vector<Board> allMoves = findMoves();
         if (allMoves.size() == 0 && allCaptures.size() == 0)
@@ -156,91 +278,99 @@ void Board::playGame()
         {
             cout << "Black's (o) turn" << endl;
         }
-        printBoard();
-        int x, y, moveIndex;
-        cout << "Enter the x coordinate of the piece you want to move: ";
-        cin >> x;
-        cout << "Enter the y coordinate of the piece you want to move: ";
-        cin >> y;
+        if (turn == WHITE_TURN) {
+            printBoard();
+            int x, y, moveIndex;
+            cout << "Enter the x coordinate of the piece you want to move: ";
+            cin >> x;
+            cout << "Enter the y coordinate of the piece you want to move: ";
+            cin >> y;
 
-        if (x < 0 || x > 7 || y < 0 || y > 7)
-        {
-            clearScreen();
-            cout << "Invalid coordinates!" << endl;
-            continue;
-        }
-
-        Square square = getSquare(x, y);
-        if (square.getPiece() == EMPTY)
-        {
-            clearScreen();
-            cout << "There is no piece there!" << endl;
-            continue;
-        }
-
-        if (!square.turnToPlay(turn))
-        {
-            clearScreen();
-            cout << "You can't move that piece!" << endl;
-            continue;
-        }
-
-        vector<Board> squareCaptures = findSquareCaptures(x, y);
-        for (int i = 0; i < squareCaptures.size(); ++i)
-        {
-            squareCaptures[i] = squareCaptures[i].captureChain();
-        }
-        if (allCaptures.size() > 0 && squareCaptures.size() == 0)
-        {
-            clearScreen();
-            cout << "You have to capture a piece!" << endl;
-            continue;
-        }
-
-        if (squareCaptures.size() == 0)
-        {
-            vector<Board> moves = findSquareMoves(x, y);
-            if (moves.size() == 0)
+            if (x < 0 || x > 7 || y < 0 || y > 7)
             {
                 clearScreen();
-                cout << "There are no moves for that piece!" << endl;
+                cout << "Invalid coordinates!" << endl;
                 continue;
             }
 
-            for (int i = 0; i < moves.size(); ++i)
-            {
-                moves[i].printBoard();
-                cout << "Move " << i << endl;
-            }
-
-            cout << "Enter the number of the move you want to make: ";
-            cin >> moveIndex;
-            if (moveIndex < 0 || moveIndex >= moves.size())
+            Square square = getSquare(x, y);
+            if (square.getPiece() == EMPTY)
             {
                 clearScreen();
-                cout << "Invalid move!" << endl;
+                cout << "There is no piece there!" << endl;
                 continue;
             }
-            copySquares(moves[moveIndex]);
-        }
-        else
-        {
+
+            if (!square.turnToPlay(turn))
+            {
+                clearScreen();
+                cout << "You can't move that piece!" << endl;
+                continue;
+            }
+
+            vector<Board> squareCaptures = findSquareCaptures(x, y);
             for (int i = 0; i < squareCaptures.size(); ++i)
             {
-                squareCaptures[i].printBoard();
-                cout << "Move " << i << endl;
+                squareCaptures[i] = squareCaptures[i].captureChain();
             }
-
-            cout << "Enter the number of the move you want to make: ";
-            cin >> moveIndex;
-
-            if (moveIndex < 0 || moveIndex >= squareCaptures.size())
+            if (allCaptures.size() > 0 && squareCaptures.size() == 0)
             {
                 clearScreen();
-                cout << "Invalid move!" << endl;
+                cout << "You have to capture a piece!" << endl;
                 continue;
             }
-            copySquares(squareCaptures[moveIndex]);
+
+            if (squareCaptures.size() == 0)
+            {
+                vector<Board> moves = findSquareMoves(x, y);
+                if (moves.size() == 0)
+                {
+                    clearScreen();
+                    cout << "There are no moves for that piece!" << endl;
+                    continue;
+                }
+
+                for (int i = 0; i < moves.size(); ++i)
+                {
+                    moves[i].printBoard();
+                    cout << "Move " << i << endl;
+                }
+
+                cout << "Enter the number of the move you want to make: ";
+                cin >> moveIndex;
+                if (moveIndex < 0 || moveIndex >= moves.size())
+                {
+                    clearScreen();
+                    cout << "Invalid move!" << endl;
+                    continue;
+                }
+                copySquares(moves[moveIndex]);
+            }
+            else
+            {
+                for (int i = 0; i < squareCaptures.size(); ++i)
+                {
+                    squareCaptures[i].printBoard();
+                    cout << "Move " << i << endl;
+                }
+
+                cout << "Enter the number of the move you want to make: ";
+                cin >> moveIndex;
+
+                if (moveIndex < 0 || moveIndex >= squareCaptures.size())
+                {
+                    clearScreen();
+                    cout << "Invalid move!" << endl;
+                    continue;
+                }
+                copySquares(squareCaptures[moveIndex]);
+            }
+        } else {
+            start = high_resolution_clock::now();
+            Board bestMove = minimax(*this, 12, true, -1000, 1000);
+            copySquares(bestMove);
+            end = high_resolution_clock::now();
+            firstAImove = true;
         }
         toggleTurn();
         clearScreen();
@@ -384,13 +514,16 @@ vector<Board> Board::findMoves()
 
 vector<Board> Board::findMovesAndCaptures()
 {
-    vector<Board> movesAndCaptures;
-    vector<Board> captures = findCaptures();
-    movesAndCaptures.insert(movesAndCaptures.end(), captures.begin(), captures.end());
-    if (captures.size() == 0)
+    vector<Board> movesAndCaptures = findCaptures();
+    if (movesAndCaptures.size() > 0) {
+        for (int i = 0; i < movesAndCaptures.size(); ++i)
+        {
+            movesAndCaptures[i] = movesAndCaptures[i].captureChain();
+        }
+    }
+    if (movesAndCaptures.size() == 0)
     {
-        vector<Board> moves = findMoves();
-        movesAndCaptures.insert(movesAndCaptures.end(), moves.begin(), moves.end());
+        movesAndCaptures = findMoves();
     }
     return movesAndCaptures;
 }
@@ -630,4 +763,28 @@ void Board::endGame()
         whiteVictory = true;
         cout << "White wins!" << endl;
     }
+}
+
+int Board::evaluate() {
+    int value = 0;
+    if(whiteVictory) {
+        value = -1000;
+    } else if (blackVictory) {
+        value = 1000;
+    } else {
+        for (int i = 0; i < 8; ++i) {
+            for(int j = 0; j < 8; ++j) {
+                if (squares[i][j].getPiece() == WHITE) {
+                    value -= 1;
+                } else if (squares[i][j].getPiece() == BLACK) {
+                    value += 1;
+                } else if (squares[i][j].getPiece() == WHITE_KING) {
+                    value -= 2;
+                } else if (squares[i][j].getPiece() == BLACK_KING) {
+                    value += 2;
+                }
+            }
+        }
+    }
+    return value;
 }

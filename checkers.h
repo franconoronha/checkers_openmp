@@ -85,6 +85,7 @@ public:
     vector<Board> findCaptures();
     vector<Board> findMovesAndCaptures();
     Board captureChain();
+    int evaluate();
     vector<Board> findSquareCaptures(int x, int y);
     vector<Board> findSquareMoves(int x, int y);
 };
