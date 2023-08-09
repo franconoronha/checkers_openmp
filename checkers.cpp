@@ -246,7 +246,7 @@ bool oppositeSquare(Square s1, Square s2)
 
 void Board::playGame()
 {   
-    cout << omp_get_num_threads() << endl;
+    omp_set_num_threads(4);
     bool firstAImove = false;
     auto start = high_resolution_clock::now();
     auto end = high_resolution_clock::now();
@@ -367,7 +367,7 @@ void Board::playGame()
             }
         } else {
             start = high_resolution_clock::now();
-            Board bestMove = minimax(*this, 12, true, -1000, 1000);
+            Board bestMove = minimax(*this, 13, true, -1000, 1000);
             copySquares(bestMove);
             end = high_resolution_clock::now();
             firstAImove = true;
