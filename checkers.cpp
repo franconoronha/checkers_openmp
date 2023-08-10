@@ -71,7 +71,6 @@ Board minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta) {
             if (flag) continue;
             Board newBoard = minimax(moves[i], depth - 1, false, alpha, beta);
             int score = newBoard.evaluate();
-            
             #pragma critical
             {
                 if (score > bestScore) {
@@ -97,6 +96,7 @@ Board minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta) {
             if (flag) continue;
             Board newBoard = minimax(moves[i], depth - 1, true, alpha, beta);
             int score = newBoard.evaluate();
+            cout << omp_get_thread_num() << endl;
             #pragma critical
             {
                 if (score < bestScore) {
@@ -249,11 +249,15 @@ void Board::playGame()
     bool firstAImove = false;
     auto start = high_resolution_clock::now();
     auto end = high_resolution_clock::now();
+    auto start_seq = high_resolution_clock::now();
+    auto end_seq = high_resolution_clock::now();
     while (!isGameOver())
     {
         if (firstAImove) {
             auto duration = duration_cast<milliseconds>(end - start);
             cout << "AI took " << duration.count() << " milliseconds to make a move" << endl;
+            auto duration_seq = duration_cast<milliseconds>(end_seq - start_seq);
+            cout << "AI took " << duration_seq.count() << " milliseconds to make a move (sequentially)" << endl;
         }
 
         if (whitePieces == 0 || blackPieces == 0)
@@ -369,6 +373,11 @@ void Board::playGame()
             Board bestMove = minimax(*this, 13, true, -1000, 1000);
             copySquares(bestMove);
             end = high_resolution_clock::now();
+    
+            start_seq = high_resolution_clock::now();
+            Board bestMove2 = minimax(*this, 13, true, -1000, 1000);
+            end_seq = high_resolution_clock::now();
+
             firstAImove = true;
         }
         toggleTurn();
