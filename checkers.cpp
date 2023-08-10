@@ -369,12 +369,12 @@ void Board::playGame()
             }
         } else {
             start = high_resolution_clock::now();
-            Board bestMove = minimax(*this, 13, true, -1000, 1000);
+            Board bestMove = minimax(*this, 11, true, -1000, 1000);
             copySquares(bestMove);
             end = high_resolution_clock::now();
     
             start_seq = high_resolution_clock::now();
-            Board bestMove2 = minimax(*this, 13, true, -1000, 1000);
+            Board bestMove2 = seq_minimax(*this, 11, true, -1000, 1000);
             end_seq = high_resolution_clock::now();
 
             firstAImove = true;
