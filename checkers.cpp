@@ -96,7 +96,6 @@ Board minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta) {
             if (flag) continue;
             Board newBoard = minimax(moves[i], depth - 1, true, alpha, beta);
             int score = newBoard.evaluate();
-            cout << omp_get_thread_num() << endl;
             #pragma critical
             {
                 if (score < bestScore) {
