@@ -59,13 +59,14 @@ Board minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta) {
     if (depth == 0 || b.isGameOver()) {
         return b;
     }
+    Board bestMove;
     if (maximizingPlayer) {
         vector<Board> moves = b.findMovesAndCaptures();
-        Board bestMove = moves[0];
+        bestMove = moves[0];
         int bestScore = -1000;
         int size = moves.size();
-        volatile bool flag = false;
-        #pragma omp parallel for shared(flag) num_threads(4)
+        bool flag = false;
+        #pragma omp parallel for shared(flag)
         for (int i = 0; i < size; ++i) {
             if (flag) continue;
             Board newBoard = minimax(moves[i], depth - 1, false, alpha, beta);
@@ -85,15 +86,13 @@ Board minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta) {
                 }
             }
         }
-
-        return bestMove;
     } else {
         vector<Board> moves = b.findMovesAndCaptures();
-        Board bestMove = moves[0];
+        bestMove = moves[0];
         int bestScore = 1000;
         int size = moves.size();
-        volatile bool flag = false;
-        #pragma omp parallel for shared(flag) num_threads(4)
+        bool flag = false;
+        #pragma omp parallel for shared(flag)
         for (int i = 0; i < size; ++i) {
             if (flag) continue;
             Board newBoard = minimax(moves[i], depth - 1, true, alpha, beta);
@@ -112,8 +111,8 @@ Board minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta) {
                 }
             }
         }
-        return bestMove;
     }
+    return bestMove;
 }
 
 void clearScreen()
