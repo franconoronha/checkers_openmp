@@ -2,9 +2,7 @@
 #include <vector>
 #include "checkers.h"
 #include <omp.h>
-#include <chrono>
 
-using namespace std::chrono;
 using namespace std;
 
 Board seq_minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta) {
@@ -242,21 +240,21 @@ bool oppositeSquare(Square s1, Square s2)
     }
 }
 
-void Board::playGame()
+void Board::playGame(int max_depth)
 {   
     omp_set_num_threads(4);
     bool firstAImove = false;
-    auto start = high_resolution_clock::now();
-    auto end = high_resolution_clock::now();
-    auto start_seq = high_resolution_clock::now();
-    auto end_seq = high_resolution_clock::now();
+    auto start = omp_get_wtime();
+    auto end = omp_get_wtime();
+    auto start_seq = omp_get_wtime();
+    auto end_seq = omp_get_wtime();
     while (!isGameOver())
     {
         if (firstAImove) {
-            auto duration = duration_cast<milliseconds>(end - start);
-            cout << "AI took " << duration.count() << " milliseconds to make a move" << endl;
-            auto duration_seq = duration_cast<milliseconds>(end_seq - start_seq);
-            cout << "AI took " << duration_seq.count() << " milliseconds to make a move (sequentially)" << endl;
+            auto duration = end - start;
+            cout << "Computer took " << duration << " seconds to make a move" << endl;
+            auto duration_seq = end_seq - start_seq;
+            cout << "Computer took " << duration_seq << " seconds to make a move (sequentially)" << endl;
         }
 
         if (whitePieces == 0 || blackPieces == 0)
@@ -368,14 +366,14 @@ void Board::playGame()
                 copySquares(squareCaptures[moveIndex]);
             }
         } else {
-            start = high_resolution_clock::now();
-            Board bestMove = minimax(*this, 11, true, -1000, 1000);
+            start = omp_get_wtime();
+            Board bestMove = minimax(*this, max_depth, true, -1000, 1000);
             copySquares(bestMove);
-            end = high_resolution_clock::now();
+            end = omp_get_wtime();
     
-            start_seq = high_resolution_clock::now();
-            Board bestMove2 = seq_minimax(*this, 11, true, -1000, 1000);
-            end_seq = high_resolution_clock::now();
+            start_seq = omp_get_wtime();
+            Board bestMove2 = seq_minimax(*this, max_depth, true, -1000, 1000);
+            end_seq = omp_get_wtime();
 
             firstAImove = true;
         }

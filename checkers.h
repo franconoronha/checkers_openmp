@@ -78,7 +78,7 @@ public:
     void clearBoard();
     void printBoard();
     void toggleTurn();
-    void playGame();
+    void playGame(int max_depth);
     void endGame();
     void copySquares(Board b);
     vector<Board> findMoves();
