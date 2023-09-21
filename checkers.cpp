@@ -28,23 +28,28 @@ Board minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta)
     Board bestMove;
     if (maximizingPlayer)
     {
-
-        vector<Board> moves = b.findMovesAndCaptures();
-        bestMove = moves[0];
-        int bestScore = -1000;
-        int size = moves.size();
-        bool flag = false;
-        for (int i = 0; i < size; ++i)
+        if (myRank == 0)
         {
-            if (flag)
-                continue;
+            vector<Board> moves = b.findMovesAndCaptures();
+            bestMove = moves[0];
+            int bestScore = -1000;
+            MPI_Send((void *)bestScore, MPI_INT, 0, 0, MPI_COMM_WORLD);
+            int size = moves.size();
+            bool flag = false;
+        }
+        if (!flag)
+        {
             Board newBoard = minimax(moves[i], depth - 1, false, alpha, beta);
             int score = newBoard.evaluate();
+
+            MPI_Recv((void *)bestScore, MPI_INT, (myRank > 0 ? myRank - 1 : 0), 0, MPI_COMM_WORLD);
             if (score > bestScore)
             {
                 bestScore = score;
-                bestMove = moves[i];
+                bestMove = moves[myRank];
             }
+            MPI_Send((void *)bestScore, MPI_INT, myRank, 0, MPI_COMM_WORLD);
+
             if (score > alpha)
             {
                 alpha = score;
@@ -57,22 +62,28 @@ Board minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta)
     }
     else
     {
-        vector<Board> moves = b.findMovesAndCaptures();
-        bestMove = moves[0];
-        int bestScore = 1000;
-        int size = moves.size();
-        bool flag = false;
-        for (int i = 0; i < size; ++i)
+        if (myRank == 0)
         {
-            if (flag)
-                continue;
+            vector<Board> moves = b.findMovesAndCaptures();
+            bestMove = moves[0];
+            int bestScore = 1000;
+            MPI_Send((void *)bestScore, MPI_INT, 0, 0, MPI_COMM_WORLD);
+            int size = moves.size();
+            bool flag = false;
+        }
+        if(!flag)
+        {
             Board newBoard = minimax(moves[i], depth - 1, true, alpha, beta);
             int score = newBoard.evaluate();
+
+            MPI_Recv((void *)bestScore, MPI_INT, (myRank > 0 ? myRank - 1 : 0), 0, MPI_COMM_WORLD);
             if (score < bestScore)
             {
                 bestScore = score;
                 bestMove = moves[i];
             }
+            MPI_Send((void *)bestScore, MPI_INT, myRank, 0, MPI_COMM_WORLD);
+
             if (score < beta)
             {
                 beta = score;
