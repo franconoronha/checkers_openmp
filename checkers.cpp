@@ -2,7 +2,7 @@
 #include <vector>
 #include "checkers.h"
 #include <omp.h>
-#include <mpi.h>mpicc
+#include <mpi.h>
 
 using namespace std;
 
