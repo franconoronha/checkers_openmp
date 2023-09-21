@@ -2,113 +2,89 @@
 #include <vector>
 #include "checkers.h"
 #include <omp.h>
+#include <mpi.h>mpicc
 
 using namespace std;
 
-Board seq_minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta) {
-    if (depth == 0 || b.isGameOver()) {
+Board minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta)
+{
+    int numProcs;
+    int myRank;
+
+    if (depth == 0 || b.isGameOver())
+    {
         return b;
     }
-    if (maximizingPlayer) {
-        vector<Board> moves = b.findMovesAndCaptures();
-        Board bestMove = moves[0];
-        int bestScore = -1000;
-        int size = moves.size();
-        for (int i = 0; i < size; ++i) {
-            Board newBoard = seq_minimax(moves[i], depth - 1, false, alpha, beta);
-            int score = newBoard.evaluate();
-            if (score > bestScore) {
-            bestScore = score;
-            bestMove = moves[i];
-            }
-            if (score > alpha) {
-                alpha = score;
-            }
-            if (beta <= alpha) {
-                break;
-            }
-        }
 
-        return bestMove;
-    } else {
-        vector<Board> moves = b.findMovesAndCaptures();
-        Board bestMove = moves[0];
-        int bestScore = 1000;
-        int size = moves.size();
-        for (int i = 0; i < size; ++i) {
-            Board newBoard = seq_minimax(moves[i], depth - 1, true, alpha, beta);
-            int score = newBoard.evaluate();
-            if (score < bestScore) {
-            bestScore = score;
-            bestMove = moves[i];
-            }
-            if (score < beta) {
-                beta = score;
-            }
-            if (beta <= alpha) {
-                break;
-            }
-        }
-        return bestMove;
-    }
-}
+    MPI_Init(NULL, NULL);
+    MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-Board minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta) {
-    if (depth == 0 || b.isGameOver()) {
-        return b;
+    if (myRank == 0)
+    {
+        cout << "  The number of processes is " << numProcs << endl;
     }
+
     Board bestMove;
-    if (maximizingPlayer) {
+    if (maximizingPlayer)
+    {
+
         vector<Board> moves = b.findMovesAndCaptures();
         bestMove = moves[0];
         int bestScore = -1000;
         int size = moves.size();
         bool flag = false;
-        #pragma omp parallel for shared(flag)
-        for (int i = 0; i < size; ++i) {
-            if (flag) continue;
+        for (int i = 0; i < size; ++i)
+        {
+            if (flag)
+                continue;
             Board newBoard = minimax(moves[i], depth - 1, false, alpha, beta);
             int score = newBoard.evaluate();
-            #pragma critical
+            if (score > bestScore)
             {
-                if (score > bestScore) {
                 bestScore = score;
                 bestMove = moves[i];
-                }
-                if (score > alpha) {
-                    alpha = score;
-                }
-                if (beta <= alpha) {
-                    flag = true;
-                }
+            }
+            if (score > alpha)
+            {
+                alpha = score;
+            }
+            if (beta <= alpha)
+            {
+                flag = true;
             }
         }
-    } else {
+    }
+    else
+    {
         vector<Board> moves = b.findMovesAndCaptures();
         bestMove = moves[0];
         int bestScore = 1000;
         int size = moves.size();
         bool flag = false;
-        #pragma omp parallel for shared(flag)
-        for (int i = 0; i < size; ++i) {
-            if (flag) continue;
+        for (int i = 0; i < size; ++i)
+        {
+            if (flag)
+                continue;
             Board newBoard = minimax(moves[i], depth - 1, true, alpha, beta);
             int score = newBoard.evaluate();
-            #pragma critical
+            if (score < bestScore)
             {
-                if (score < bestScore) {
                 bestScore = score;
                 bestMove = moves[i];
-                }
-                if (score < beta) {
-                    beta = score;
-                }
-                if (beta <= alpha) {
-                    flag = true;
-                }
+            }
+            if (score < beta)
+            {
+                beta = score;
+            }
+            if (beta <= alpha)
+            {
+                flag = true;
             }
         }
     }
+
+    MPI_Finalize();
     return bestMove;
 }
 
@@ -241,16 +217,14 @@ bool oppositeSquare(Square s1, Square s2)
 }
 
 void Board::playGame(int max_depth)
-{   
-    omp_set_num_threads(4);
+{
     bool firstAImove = false;
-    auto start = omp_get_wtime();
-    auto end = omp_get_wtime();
-    auto start_seq = omp_get_wtime();
-    auto end_seq = omp_get_wtime();
+    auto start = MPI_Wtime();
+    auto end = MPI_Wtime();
     while (!isGameOver())
     {
-        if (firstAImove) {
+        if (firstAImove)
+        {
             auto duration = end - start;
             cout << "Computer took " << duration << " seconds to make a move" << endl;
             auto duration_seq = end_seq - start_seq;
@@ -278,7 +252,8 @@ void Board::playGame(int max_depth)
         {
             cout << "Black's (o) turn" << endl;
         }
-        if (turn == WHITE_TURN) {
+        if (turn == WHITE_TURN)
+        {
             printBoard();
             int x, y, moveIndex;
             cout << "Enter the x coordinate of the piece you want to move: ";
@@ -365,15 +340,13 @@ void Board::playGame(int max_depth)
                 }
                 copySquares(squareCaptures[moveIndex]);
             }
-        } else {
-            start = omp_get_wtime();
+        }
+        else
+        {
+            start = MPI_Wtime();
             Board bestMove = minimax(*this, max_depth, true, -1000, 1000);
             copySquares(bestMove);
-            end = omp_get_wtime();
-    
-            start_seq = omp_get_wtime();
-            Board bestMove2 = seq_minimax(*this, max_depth, true, -1000, 1000);
-            end_seq = omp_get_wtime();
+            end = MPI_Wtime();
 
             firstAImove = true;
         }
@@ -520,7 +493,8 @@ vector<Board> Board::findMoves()
 vector<Board> Board::findMovesAndCaptures()
 {
     vector<Board> movesAndCaptures = findCaptures();
-    if (movesAndCaptures.size() > 0) {
+    if (movesAndCaptures.size() > 0)
+    {
         for (int i = 0; i < movesAndCaptures.size(); ++i)
         {
             movesAndCaptures[i] = movesAndCaptures[i].captureChain();
@@ -770,22 +744,37 @@ void Board::endGame()
     }
 }
 
-int Board::evaluate() {
+int Board::evaluate()
+{
     int value = 0;
-    if(whiteVictory) {
+    if (whiteVictory)
+    {
         value = -1000;
-    } else if (blackVictory) {
+    }
+    else if (blackVictory)
+    {
         value = 1000;
-    } else {
-        for (int i = 0; i < 8; ++i) {
-            for(int j = 0; j < 8; ++j) {
-                if (squares[i][j].getPiece() == WHITE) {
+    }
+    else
+    {
+        for (int i = 0; i < 8; ++i)
+        {
+            for (int j = 0; j < 8; ++j)
+            {
+                if (squares[i][j].getPiece() == WHITE)
+                {
                     value -= 1;
-                } else if (squares[i][j].getPiece() == BLACK) {
+                }
+                else if (squares[i][j].getPiece() == BLACK)
+                {
                     value += 1;
-                } else if (squares[i][j].getPiece() == WHITE_KING) {
+                }
+                else if (squares[i][j].getPiece() == WHITE_KING)
+                {
                     value -= 2;
-                } else if (squares[i][j].getPiece() == BLACK_KING) {
+                }
+                else if (squares[i][j].getPiece() == BLACK_KING)
+                {
                     value += 2;
                 }
             }
