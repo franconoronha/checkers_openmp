@@ -90,4 +90,5 @@ public:
     vector<Board> findSquareMoves(int x, int y);
     int* toArray();
     void arrayToBoard(int *array);
+    bool equalTo(Board compare);
 };

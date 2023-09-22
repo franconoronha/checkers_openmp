@@ -207,26 +207,22 @@ void Board::playGame(int max_depth)
 {
     int numProcs;
     int myRank;
-    int *array;
-    int *array_recv;
     MPI_Status st;
-    
+    vector<Board> bestMoves;
+    vector<Board> enemyMoves;
     MPI_Init(NULL, NULL);
     MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-    cout << numProcs << endl;
+
+    if(numProcs != 2) {
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
 
     bool firstAImove = false;
     auto start = MPI_Wtime();
     auto end = MPI_Wtime();
     while (!isGameOver())
     {
-        // if (firstAImove)
-        // {
-        //     auto duration = end - start;
-        //     cout << "Computer took " << duration << " seconds to make a move" << endl;
-        // }
-
         if (whitePieces == 0 || blackPieces == 0)
         {
             endGame();
@@ -311,11 +307,14 @@ void Board::playGame(int max_depth)
                     continue;
                 }
                 copySquares(moves[moveIndex]);
-                array = toArray();
 
+                int *array;
+                int array_recv[64];
+                array = toArray();
+                
                 MPI_Send(array, 64, MPI_INT, 1, 0, MPI_COMM_WORLD);
                 MPI_Recv(array_recv, 64, MPI_INT, 1, MPI_ANY_TAG, MPI_COMM_WORLD, &st);
-                arrayToBoard(array);
+                arrayToBoard(array_recv);
             }
             else
             {
@@ -335,6 +334,9 @@ void Board::playGame(int max_depth)
                     continue;
                 }
                 copySquares(squareCaptures[moveIndex]);
+
+                int *array;
+                int array_recv[64];
                 array = toArray();
                 
                 MPI_Send(array, 64, MPI_INT, 1, 0, MPI_COMM_WORLD);
@@ -345,25 +347,47 @@ void Board::playGame(int max_depth)
         if(myRank == 1)
         {
             setTurn(BLACK_TURN);
+            int *array;
+            int array_recv[64];
             MPI_Recv(array_recv, 64, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &st);
-            cout << "oi" << endl;
-            arrayToBoard(array_recv);
-
+            arrayToBoard(array_recv); 
+            
             cout << "Black's (o) turn" << endl;
-
-            start = MPI_Wtime();
+            if(firstAImove) {
+                for(int i = 0; i < enemyMoves.size(); ++i) {
+                    if(equalTo(enemyMoves[i])) {
+                        bestMoves[i].printBoard();
+                        cout << "+=======" << endl;
+                        copySquares(bestMoves[i]);
+                        break;
+                    }
+                }
+            } else {
             
-            Board bestMove = minimax(*this, max_depth, true, -1000, 1000);
-            copySquares(bestMove);
-            end = MPI_Wtime();
+                Board bestMove = minimax(*this, max_depth, true, -1000, 1000);
+                copySquares(bestMove);
 
-            firstAImove = true;
+                firstAImove = true;
+            }
             array = toArray();
-            MPI_Send(array, 64, MPI_INT, 0, 0, MPI_COMM_WORLD);
-            
-        }
 
-        // clearScreen();
+            MPI_Send(array, 64, MPI_INT, 0, 0, MPI_COMM_WORLD);
+            enemyMoves.clear();
+            bestMoves.clear();
+            setTurn(WHITE_TURN);
+            enemyMoves = findMovesAndCaptures();
+            setTurn(BLACK_TURN);
+            for(int i = 0; i < enemyMoves.size(); ++i) {
+                enemyMoves[i].setTurn(BLACK_TURN);
+                Board bestMove = minimax(enemyMoves[i], max_depth, true, -1000, 1000);
+                bestMoves.push_back(bestMove);
+                // cout << "=POSSIBLE WHITE MOVE=" << endl;
+                // enemyMoves[i].printBoard();
+                // cout << "=BEST MOVE FOR BLACK=" << endl;
+                // bestMove.printBoard();
+                // cout << "==========" << endl;
+            }
+        }
     }
 
     MPI_Finalize();
@@ -825,4 +849,14 @@ void Board::arrayToBoard(int* array) {
     }
     blackPieces = blackCount;
     whitePieces = whiteCount;
+}
+
+bool Board::equalTo(Board compare) {
+    for(int i = 0; i < 8; ++i) {
+        for(int j = 0; j < 8; ++j) {
+            if(squares[i][j].getPiece() != compare.getSquare(i, j).getPiece())
+                return false;
+        }
+    }
+    return true;
 }
