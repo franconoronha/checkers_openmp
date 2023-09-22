@@ -1,4 +1,4 @@
 c:
-	g++ main.cpp checkers.cpp -fopenmp -lpthread -o checkers
-warnings:
-	g++ main.cpp checkers.cpp -fopenmp -lpthread -o checkers -Wall -pedantic
+	mpic++ main.cpp checkers.cpp -o checkers  
+run:
+	mpirun -np 2 ./checkers

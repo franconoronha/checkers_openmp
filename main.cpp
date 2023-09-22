@@ -12,7 +12,7 @@ int main()
     do
     {
         board.clearBoard();
-        board.playGame(11);
+        board.playGame(5);
         cout << "Do you want to play again? (y for yes, anything else for no)";
         cin >> again;
     } while (again.compare("y") == 0);

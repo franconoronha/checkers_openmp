@@ -8,27 +8,15 @@ using namespace std;
 
 Board minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta)
 {
-    int numProcs;
-    int myRank;
 
     if (depth == 0 || b.isGameOver())
     {
         return b;
     }
 
-    MPI_Init(NULL, NULL);
-    MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
-    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-
-    if (myRank == 0)
-    {
-        cout << "  The number of processes is " << numProcs << endl;
-    }
-
     Board bestMove;
     if (maximizingPlayer)
     {
-
         vector<Board> moves = b.findMovesAndCaptures();
         bestMove = moves[0];
         int bestScore = -1000;
@@ -84,7 +72,6 @@ Board minimax(Board b, int depth, bool maximizingPlayer, int alpha, int beta)
         }
     }
 
-    MPI_Finalize();
     return bestMove;
 }
 
@@ -218,18 +205,27 @@ bool oppositeSquare(Square s1, Square s2)
 
 void Board::playGame(int max_depth)
 {
+    int numProcs;
+    int myRank;
+    int *array;
+    int *array_recv;
+    MPI_Status st;
+    
+    MPI_Init(NULL, NULL);
+    MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+    cout << numProcs << endl;
+
     bool firstAImove = false;
     auto start = MPI_Wtime();
     auto end = MPI_Wtime();
     while (!isGameOver())
     {
-        if (firstAImove)
-        {
-            auto duration = end - start;
-            cout << "Computer took " << duration << " seconds to make a move" << endl;
-            auto duration_seq = end_seq - start_seq;
-            cout << "Computer took " << duration_seq << " seconds to make a move (sequentially)" << endl;
-        }
+        // if (firstAImove)
+        // {
+        //     auto duration = end - start;
+        //     cout << "Computer took " << duration << " seconds to make a move" << endl;
+        // }
 
         if (whitePieces == 0 || blackPieces == 0)
         {
@@ -244,16 +240,11 @@ void Board::playGame(int max_depth)
             endGame();
             break;
         }
-        if (turn == WHITE_TURN)
+
+        if (myRank == 0)
         {
+            setTurn(WHITE_TURN);
             cout << "White's (x) turn" << endl;
-        }
-        else
-        {
-            cout << "Black's (o) turn" << endl;
-        }
-        if (turn == WHITE_TURN)
-        {
             printBoard();
             int x, y, moveIndex;
             cout << "Enter the x coordinate of the piece you want to move: ";
@@ -320,6 +311,11 @@ void Board::playGame(int max_depth)
                     continue;
                 }
                 copySquares(moves[moveIndex]);
+                array = toArray();
+
+                MPI_Send(array, 64, MPI_INT, 1, 0, MPI_COMM_WORLD);
+                MPI_Recv(array_recv, 64, MPI_INT, 1, MPI_ANY_TAG, MPI_COMM_WORLD, &st);
+                arrayToBoard(array);
             }
             else
             {
@@ -339,20 +335,38 @@ void Board::playGame(int max_depth)
                     continue;
                 }
                 copySquares(squareCaptures[moveIndex]);
+                array = toArray();
+                
+                MPI_Send(array, 64, MPI_INT, 1, 0, MPI_COMM_WORLD);
+                MPI_Recv(array_recv, 64, MPI_INT, 1, MPI_ANY_TAG, MPI_COMM_WORLD, &st);
+                arrayToBoard(array_recv);
             }
         }
-        else
+        if(myRank == 1)
         {
+            setTurn(BLACK_TURN);
+            MPI_Recv(array_recv, 64, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &st);
+            cout << "oi" << endl;
+            arrayToBoard(array_recv);
+
+            cout << "Black's (o) turn" << endl;
+
             start = MPI_Wtime();
+            
             Board bestMove = minimax(*this, max_depth, true, -1000, 1000);
             copySquares(bestMove);
             end = MPI_Wtime();
 
             firstAImove = true;
+            array = toArray();
+            MPI_Send(array, 64, MPI_INT, 0, 0, MPI_COMM_WORLD);
+            
         }
-        toggleTurn();
-        clearScreen();
+
+        // clearScreen();
     }
+
+    MPI_Finalize();
 }
 
 void Board::copySquares(Board b)
@@ -781,4 +795,34 @@ int Board::evaluate()
         }
     }
     return value;
+}
+
+int* Board::toArray() {
+    static int array[64];
+    
+    for(int i = 0; i < 8; ++i) {
+        for(int j = 0; j < 8; ++j) {
+            array[i * 8 + j] = squares[i][j].getPiece();
+        }
+    }
+
+    return array;
+}
+
+void Board::arrayToBoard(int* array) {
+    int blackCount, whiteCount;
+    for(int i = 0; i < 8; ++i) {
+        for(int j = 0; j < 8; j++) {
+            if(array[i * 8 + j] == BLACK || array[i * 8 + j] == BLACK_KING) {
+                blackCount++;
+            }
+            else if(array[i * 8 + j] == WHITE || array[i * 8 + j] == WHITE_KING) {
+                whiteCount++;
+            }
+            squares[i][j].setPiece((Piece)array[i * 8 + j]);
+            
+        }
+    }
+    blackPieces = blackCount;
+    whitePieces = whiteCount;
 }

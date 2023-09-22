@@ -88,4 +88,6 @@ public:
     int evaluate();
     vector<Board> findSquareCaptures(int x, int y);
     vector<Board> findSquareMoves(int x, int y);
+    int* toArray();
+    void arrayToBoard(int *array);
 };
